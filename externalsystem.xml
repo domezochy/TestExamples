@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd">
+	<flow name="externalsystemFlow" doc:id="f799ebf8-273a-498e-b966-459906c9182f" initialState="stopped">
+		<http:listener doc:name="Listener" doc:id="e733193a-efe8-43b9-859c-a6c4202a8602" path="/external-system" config-ref="HTTP_Listener_config"/>
+		<db:select doc:id="7a7f2dcd-e980-4eb2-8912-2695b25f494b" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from muletrainingdb.product where name =:hp and product_id =:id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	hp : attributes.queryParams.name,
+	id : attributes.queryParams.product_id as String
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="9921a6a2-ba99-43e5-a9db-b99ba3a7f4ef" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<ee:transform doc:name="Transform Message" doc:id="f79f54cd-4fc8-4dd6-a6fe-a0cb05829fe9">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<file:write doc:name="Write" doc:id="0b32fe3d-8cc8-4cfc-a40e-66e8732596f1" path="/Users/olesochy/Downloads/file.txt" mode="APPEND"/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="e856739f-fdd2-45f4-8fdf-49e2b0cbda90" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "no data sent"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="5ce4d836-55bf-434d-a265-13be7baad7b9" />
+	</flow>
+	<flow name="salesforceexternalsystemFlow" doc:id="383ca79e-505d-4a4c-ba4c-3bce1cd06e6a" >
+		<http:listener doc:name="Copy_of_Listener" doc:id="2c47e2aa-b68d-44dc-b149-6af656172173" config-ref="HTTP_Listener_config" path="/external-system" />
+		<db:select doc:name="Copy_of_Select" doc:id="4a93dbfa-99b0-424f-a24c-dee694771335" config-ref="Database_Config" >
+			<db:sql ><![CDATA[select * from muletrainingdb.product where name =:hp and product_id =:id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	hp : attributes.queryParams.name,
+	id : attributes.queryParams.product_id as String
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Copy_of_Choice" doc:id="ac5723bd-b276-405c-a9d3-5343a81e08de" >
+			<when expression="#[sizeOf(payload) &gt; 0]" >
+				<ee:transform doc:name="Copy_of_Transform Message" doc:id="ac68c35d-4802-4183-a3e9-ff088e0cf76d" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<s3:create-object doc:name="Create object" doc:id="a538502b-dfb5-4355-b317-cdbcefb727ec" config-ref="Amazon_S3_Configuration" bucketName="${aws.bucket}" key="${aws.filename}"/>
+				<ee:transform doc:name="Transform Message" doc:id="fa439922-a834-4658-9ff2-985479b69860" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Copy_of_Transform Message" doc:id="60bf1667-107f-43e0-b7c4-21b96a7a3cf4" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "no data sent"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Copy_of_Logger" doc:id="64c3d2a7-de79-4305-ae01-947443b80fa7" />
+	</flow>
+</mule>

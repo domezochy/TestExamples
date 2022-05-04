@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<configuration doc:name="Configuration" doc:id="48ed53fd-30a4-41ef-8789-a8314522b712" defaultErrorHandler-ref="common-error-handlingError_Handler" />
+	<error-handler name="common-error-handlingError_Handler" doc:id="50e76a03-1167-4aa6-ac5d-b2ff707d0e28" >
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="50b5d6ba-edf2-4ac3-8f53-f45ffe1da831" type="DB:BAD_SQL_SYNTAX, DB:CONNECTIVITY, DB:QUERY_EXECUTION, EXPRESSION">
+			<ee:transform doc:name="Transform Message" doc:id="f2feda46-0f2e-450d-81f3-286ea0018093" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error" : error.description
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="eb6cdf0d-113d-4708-a22e-80fab310addf" type="STREAM_MAXIMUM_SIZE_EXCEEDED">
+			<ee:transform doc:name="Transform Message" doc:id="ba0d6dbc-d4c1-40cb-bb84-e828ec8412db" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error" : error.description
+}
+]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+	</error-handler>
+</mule>
